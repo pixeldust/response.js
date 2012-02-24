@@ -153,12 +153,14 @@ Since version 0.3.0, the mode parameter is ignored because the appropriate mode 
 
 Since version 0.2.6, Response does not setup any default attributes. Devs should setup their attributes by using `Response.create()` directly or by passing args in a JSON object stored in a `data-responsejs` attribute on the `<body>` tag.
 
+Since version 0.3.0.20120224, the "usedpr" parameter allows breakpoint matches to take into account the density pixel density of the device. "usedpr" defaults to false if not specified.
+
 ### Example: custom setup via JSON in data attribute (recommended method)
 ```html
     <body data-responsejs='{ 
         "create": [ 
-            { "prop": "width", "mode": "src",  "prefix": "src", "breakpoints": [1281,1025,961,641,481,320,0] },
-            { "prop": "width", "mode": "markup", "prefix": "r", "breakpoints": [1281,1025,961,641,481,320,0] }
+            { "prop": "width", "mode": "src",  "prefix": "src", "breakpoints": [1281,1025,961,641,481,320,0], "usedpr": true },
+            { "prop": "width", "mode": "markup", "prefix": "r", "breakpoints": [1281,1025,961,641,481,320,0], "usedpr": false }
         ]}'
     >
 ```
@@ -169,12 +171,14 @@ Tip: use [jsonlint.com](http://jslint.com/) to make sure JSON is valid.
     Response.create([{
         mode: "markup", // either "markup" or "src"
         prefix: "r",    // the prefix for your custom data attributes
-        breakpoints: [1281,1025,961,641,481,320,0] // array of (min) breakpoints
+        breakpoints: [1281,1025,961,641,481,320,0], // array of (min) breakpoints
+        usedpr: true   // Take device pixel density into account
     },
     {
         mode: "src",    // either "markup" or "src"
         prefix: "src",  // the prefix for your custom data attributes
-        breakpoints: [1281,1025,961,641,481,320,0] // array of (min) breakpoints
+        breakpoints: [1281,1025,961,641,481,320,0], // array of (min) breakpoints
+        usedpr: false   // Ignore device pixel density (default)
     }])
 ```
 
@@ -185,4 +189,4 @@ img|input|source|embed|track elements always behave in src mode.
 iframe|audio|video elements behave in src mode only when the src attribute is present. Otherwise they 
 use markup mode.
 
-All other elements behave in markup mode. 
+All other elements behave in markup mode.
