@@ -1,4 +1,8 @@
-# CHANGELOG | [current](https://github.com/ryanve/response.js/blob/master/response.js) 
+# CHANGELOG | [current](https://github.com/pixeldust/response.js/blob/master/response.js) 
+
+## [0.3.0.20120224](https://github.com/pixeldust/response.js/commit/f3cd922b2f403b8d219feac08afb630779f37f9e#response.js) (2012-02-24)
+- Created my fork from [ryanve](https://github.com/ryanve) (Ryan Van Etten) 0.3.0 version.
+- [Response.create](http://responsejs.com/#create) now accepts the optional `'usedpr'` parameter. Using `'usedpr: true'` in an [Response.create](http://responsejs.com/#create) object forces breakpoint matches to take into account the pixel density ratio of the device, i.e calculate actual width/height of the device. For example: on a retina device this means the device dimensions 320x480 are treated as 480x960.
 
 ## [0.2.9](https://github.com/ryanve/response.js/commit/6d483eee4eb0e60b96d3b251d8f3bad168fc0fda#response.js) (2011-01-02)
 - [Fixed issue reading data-responsejs attribute](https://github.com/ryanve/response.js/issues/3).
