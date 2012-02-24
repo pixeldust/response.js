@@ -1,9 +1,10 @@
 /*!
  * Response   Responsive design toolkit
- * @link      http://responsejs.com
- * @author    Ryan Van Etten (c) 2011
+ * @link      https://github.com/pixeldust/response.js
+ * @author    Jason Williams
+ * @author    Ryan Van Etten (c) 2011 (original)
  * @license   MIT
- * @version   0.3.0
+ * @version   0.3.0.20120224
  * @requires  jQuery 1.7+ or Zepto 0.8+
  */
 
@@ -25,6 +26,7 @@
       , $doc = $(doc)                         // Cache selector.
       , $window = $(window)                   // Cache selector.
       , initContentKey = 'i' + namespace      // Key for storing initial (no-js) content. Default: 'iResponse'
+      , deviceDpr = 1    					  // Default to 1 for now
       
       , doError = function(msg) {
             // Error handling. (Throws exception.)
@@ -433,8 +435,8 @@
             return this; // chainable
         }//action
 
-      , deviceW = window.screen.width                // These don't change so we can just set them.
-      , deviceH = window.screen.height               // See @link responsejs.com/labs/dimensions/
+      , deviceW = window.screen.width            // These don't change so we can just set them.
+      , deviceH = window.screen.height           // See @link responsejs.com/labs/dimensions/
       , deviceMax = Math.max(deviceW, deviceH)
 
       // Functions for viewport width and height. See @link responsejs.com/labs/dimensions/
@@ -529,13 +531,14 @@
          * @since   0.1.1
          * @param   integer      min    is the min-width in pixels
          * @param   integer      max    is the max-width in pixels
+         * @param	boolean		 usedpr should be take device pixel density into account
          * @return  boolean
          * @example w/ min only:    Response.band(481)   // true when viewport width is 481px+
          * @example w/ min and max: Response.band(0,480) // true when viewport width is 0-480px
          */
          
-      , band = function (min, max) {
-            return inORout(viewportW(), min, max);
+      , band = function (min, max, usedpr) {
+    	  	return inORout(usedpr ? deviceDpr*viewportW() : viewportW(), min, max);
         }
     
         /**
@@ -544,13 +547,14 @@
          * @since   0.2.9
          * @param   integer      min    is the min-height in pixels
          * @param   integer      max    is the max-height in pixels
+         * @param	boolean		 usedpr should be take device pixel density into account
          * @return  boolean
          * @example w/ min only:    Response.wave(481)   // true when viewport height is 481px+
          * @example w/ min and max: Response.wave(0,480) // true when viewport height is 0-480px
          */    
      
-      , wave = function (min, max) {
-            return inORout(viewportH(), min, max);
+      , wave = function (min, max, usedpr) {
+    	  return inORout(usedpr ? deviceDpr*viewportH() : viewportH(), min, max);
         }
        
       , device = {
@@ -633,7 +637,7 @@
     
       , dpr = function(decimal) {
       
-            var dPR = window.devicePixelRatio;
+    	  	var dPR = window.devicePixelRatio;
               
             if ( !arguments.length ) {//Return exact value or kinda iterate for approx:
                 return dPR || (dpr(2) ? 2 : dpr(1.5) ? 1.5 : dpr(1) ? 1 : 0);
@@ -797,6 +801,10 @@
                 
             ;//var
             
+            // Multi-dimensional cache to track breakpoints by use of pixel density
+            // memoizeCache[usedpr][breakpoint]
+            memoizeCache[false] = memoizeCache[true] = [];
+            
             propTests['device-width']       = device.band;  // static
             propTests['device-height']      = device.wave;  // static    
             propTests['device-pixel-ratio'] = dpr;          // static
@@ -815,12 +823,15 @@
               , verge: undef              // integer   defaults to Math.min(deviceMax, 500)
               , newValue: 0
               , currValue: 1
+              , usedpr: false			  // boolean   validate @ cofigure()
           
               , cut: function(arr, maxNum) {
                     // Remove breakpoints that are above the device's max dimension.
                     // Do this to reduce the number of iterations needed in decideValue()
                     // Must be done before Elemset keys are created so that the keys match.
-                    maxNum = maxNum || deviceMax;
+            	  	// If enable for Elemset, then take into account pixel density to 
+            	  	// recalcuate actual pixel width of device.
+                    maxNum = maxNum || (this.usedpr ? deviceDpr*deviceMax : deviceMax);
                     return grep(arr, function(n) { return n <= maxNum; });
                 }
             
@@ -845,16 +856,17 @@
               //, deletes: function() { return deletesChainable.apply(this.$, arguments); }
               
               , reset: function() {        // Reset memoize cache. It's safe to set index zero to true b/c all the the test
-                    memoizeCache = [true]; // methods (see propTests) return true for zero. E.g. b/c band(0) === true // always
+                    memoizeCache[false] = [true]; // methods (see propTests) return true for zero. E.g. b/c band(0) === true // always
+                    memoizeCache[true] = [true];
                     return this;           // chainable
                 }
                 
-              , memoize: function(breakpoint) {
-                      // Prevents repeating tests:
-                    if ( 'boolean' !== typeof memoizeCache[breakpoint] ) {
-                        memoizeCache[breakpoint] = this.method(breakpoint);
+              , memoize: function(breakpoint, usedpr) {
+                    // Prevents repeating tests:
+            	    if ( 'boolean' !== typeof memoizeCache[usedpr][breakpoint] ) {
+            	    	memoizeCache[usedpr][breakpoint] = this.method(breakpoint, undefined, usedpr);
                     }
-                    return memoizeCache[breakpoint];
+                    return memoizeCache[usedpr][breakpoint];
                 }
     
               , configure: function(options) {
@@ -862,6 +874,9 @@
                     
                     merge(context, options, true); // Merge properties from options object into this object.
                     
+                    // Force usedpr to be boolean
+                    context.usedpr = Boolean(options.usedpr);
+                    	
                     context.verge = isFinite(context.verge) ? context.verge : Math.min(deviceMax, 500);
                     
                     context.prefix = sanitize(context.prefix) || doError('create @prefix');
@@ -877,7 +892,7 @@
                     // Then cut any breakpoints that are higher than the deviceMax dimension so that
                     // we'll have iterations later:
                     context.breakpoints = context.cut(context.valid8());
-                    
+                                  
                     // Use the breakpoints array to create array of data keys:
                     context.keys = map(context.breakpoints, function(bp){ return context.prefix + bp; });
                     
@@ -905,7 +920,7 @@
                 // They are for use in a cloned instances within a loop.
             
               , decideValue: function() {
-                    // Return the first value from the values array that passes the boolean
+            	  	// Return the first value from the values array that passes the boolean
                     // test callback. If none pass the test, then return the fallback value.
                     // this.breakpoints.length === this.values.length + 1  
                     // The extra member in the values array is the initContentKey value.
@@ -915,7 +930,7 @@
                       , i = sL
                     ;
                     while( !val && i-- ) {
-                        if ( this.memoize(subjects[i]) ) {
+                        if ( this.memoize(subjects[i], this.usedpr) ) {
                             val = this.values[i];                        
                         }
                     }
@@ -1018,8 +1033,8 @@
                 });
                 
                 function resizeHandler() {   // Only runs for dynamic props.
-                    elemset.reset().each(function(i, v) {// Reset memoize cache and then loop thru the set.
-                        elemset[i].decideValue().updateDOM(); // Grab elem object from cache and update all.
+                	elemset.reset().each(function(i, v) {// Reset memoize cache and then loop thru the set.
+                		elemset[i].decideValue().updateDOM(); // Grab elem object from cache and update all.
                     }).trigger(customEventOne);
                 }
                 
@@ -1143,8 +1158,12 @@
     /**
      * Initialize
      */
-     
+
     $doc.ready(function(customData) {
+    	// Grab device's device's pixel density ratio to avoid repeated lookups, 
+    	// falls back to 1 if dpr is unobtainable.
+    	deviceDpr = dpr() || 1;	
+    	
         customData = dataset(doc.body, 'responsejs'); // Read data-responsejs attr.            
         if ( customData ) {
             customData = supportsNativeJSON ? JSON.parse(customData) : $.parseJSON ? $.parseJSON(customData) : {};
